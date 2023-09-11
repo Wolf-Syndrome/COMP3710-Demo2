@@ -21,7 +21,7 @@ num_epochs = 1
 learning_rate = 0.1
 model_name = "unet"
 path = 'data/keras_png_slices_data/'
-batch_size = 128
+batch_size = 4
 
 # Dataloader
 
@@ -53,6 +53,7 @@ class OASISDataset(Dataset):
 
 transform = transforms.Compose([
     transforms.ToTensor(),
+    transforms.Resize((128, 128), antialias=True)
 ])
 
 torch.manual_seed(47)
@@ -100,16 +101,16 @@ class UNet(nn.Module):
         self.sec5 = self._make_layer(512, 1024, 1024)
 
         self.upconv1 = nn.ConvTranspose2d(in_channels=1024, out_channels=1024//2,
-                                kernel_size=2, stride=2, padding=1)
+                                kernel_size=2, stride=2)
         self.sec6 = self._make_layer(1024, 512, 512)
         self.upconv2 = nn.ConvTranspose2d(in_channels=512, out_channels=512//2,
-                                kernel_size=2, stride=2, padding=1)
+                                kernel_size=2, stride=2)
         self.sec7 = self._make_layer(512, 256, 256)
-        self.upconv3 = nn.ConvTranspose2d(in_channels=512, out_channels=512//2,
-                                kernel_size=2, stride=2, padding=1)
+        self.upconv3 = nn.ConvTranspose2d(in_channels=256, out_channels=256//2,
+                                kernel_size=2, stride=2)
         self.sec8 = self._make_layer(256, 128, 128)
-        self.upconv4 = nn.ConvTranspose2d(in_channels=512, out_channels=512//2,
-                                kernel_size=2, stride=2, padding=1)
+        self.upconv4 = nn.ConvTranspose2d(in_channels=128, out_channels=128//2,
+                                kernel_size=2, stride=2)
         self.sec9 = self._make_layer(128, 64, 64)
         self.sec10 = nn.Conv2d(64, 1, kernel_size=1, stride=1)
 
@@ -159,17 +160,21 @@ print("Model No. of Parameters:", sum([param.nelement() for param in model.param
 
 # The SDC criterion 
 # Based on https://github.com/pytorch/pytorch/issues/1249
-def SDC_loss(input, target):
-    smooth = 1. # Used to help overfitting + /0
+class SDC_loss(nn.Module):
+    def __init__(self):
+        super(SDC_loss, self).__init__()
 
-    iflat = input.view(-1)
-    tflat = target.view(-1)
-    intersection = (iflat * tflat).sum()
-    
-    return ((2. * intersection + smooth) /
-              (iflat.sum() + tflat.sum() + smooth))
+    def forward(self, inputs, targets):
+        smooth = 1. # Used to help overfitting + /0
 
-criterion = SDC_loss
+        iflat = inputs.view(-1)
+        tflat = targets.view(-1)
+        intersection = (iflat * tflat).sum()
+        
+        return 1.0 - ((2. * intersection + smooth) /
+                (iflat.sum() + tflat.sum() + smooth)).mean()
+
+criterion = SDC_loss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=5e-4)
 #optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=5e-4)
 
@@ -180,6 +185,7 @@ print("> Training")
 start = perf_counter() #time generation
 for epoch in range(num_epochs):
     for i, (images, labels) in enumerate(train_loader): #load a batch
+
         images = images.to(device)
         labels = labels.to(device)
 
