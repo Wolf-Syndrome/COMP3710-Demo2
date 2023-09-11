@@ -17,7 +17,7 @@ if not torch.cuda.is_available():
     exit()
 
 # Hyper parameters
-num_epochs = 10
+num_epochs = 1
 learning_rate = 0.01
 model_name = "unet"
 path = 'data/keras_png_slices_data/'
@@ -51,14 +51,19 @@ class OASISDataset(Dataset):
 
 
 
-transform = transforms.Compose([
+aug_transform = transforms.Compose([
     transforms.RandomResizedCrop(size=(128, 128), scale=(0.9, 1.0), antialias=True),
     transforms.RandomVerticalFlip(),
     transforms.ToTensor(),
 ])
 
+transform = transforms.Compose([
+    transforms.Resize(size=(128, 128), antialias=True),
+    transforms.ToTensor(),
+])
+
 torch.manual_seed(47)
-train_dataset = OASISDataset(path + 'keras_png_slices_train', path + 'keras_png_slices_seg_train', transform)
+train_dataset = OASISDataset(path + 'keras_png_slices_train', path + 'keras_png_slices_seg_train', aug_transform)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 total_step = len(train_loader)
 
