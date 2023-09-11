@@ -15,7 +15,7 @@ if not torch.cuda.is_available():
 num_epochs = 35
 learning_rate = 0.1
 num_classes = 10
-model_name = "test"
+model_name = "resnet18"
 path = ''
 
 # Data
