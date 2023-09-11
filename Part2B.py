@@ -10,7 +10,7 @@ if not torch.cuda.is_available():
     print("Warning CUDA not Found. Using CPU")
     
 # Hyper parameters
-num_epochs = 35
+num_epochs = 1
 learning_rate = 0.1
 num_classes = 10
 model_name = "test"
