@@ -170,14 +170,14 @@ class SDC_loss(nn.Module):
         iflat = inputs.contiguous().view(-1)
         tflat = targets.contiguous().view(-1)
         intersection = (iflat * tflat).sum()
-        union = (tflat * tflat).sum() + (tflat * iflat).sum()
+        union = tflat.sum() + iflat.sum()
         
         return 1.0 - ((2. * intersection + smooth) /
                 (union + smooth))
 
 criterion = SDC_loss()
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=5e-4)
-#optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=5e-4)
+#optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=5e-4)
+optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=5e-4)
 
 #--------------
 # Train the model
@@ -223,7 +223,7 @@ with torch.no_grad():
 
         total_loss += loss.item()
         
-    print('Test Accuracy: {} %'.format(100 * total_loss / len(test_loader)))
+    print('Test Accuracy: {} %'.format(100 * (1 - total_loss / len(test_loader))))
 end = perf_counter()
 elapsed = end - start
 print("Testing took " + str(elapsed) + " secs or " + str(elapsed/60) + " mins in total") 
