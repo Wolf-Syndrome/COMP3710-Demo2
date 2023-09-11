@@ -167,12 +167,13 @@ class SDC_loss(nn.Module):
     def forward(self, inputs, targets):
         smooth = 1. # Used to help overfitting + /0
 
-        iflat = inputs.view(-1)
-        tflat = targets.view(-1)
+        iflat = inputs.contiguous().view(-1)
+        tflat = targets.contiguous().view(-1)
         intersection = (iflat * tflat).sum()
+        union = (tflat * tflat).sum() + (tflat * iflat).sum()
         
         return 1.0 - ((2. * intersection + smooth) /
-                (iflat.sum() + tflat.sum() + smooth)).mean()
+                (union + smooth))
 
 criterion = SDC_loss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=5e-4)
@@ -211,7 +212,7 @@ print("> Testing")
 start = perf_counter() #time generation
 model.eval()
 with torch.no_grad():
-    total_loss = 0
+    total_loss = 0.0
     for images, labels in test_loader:
         images = images.to(device)
         labels = labels.to(device)
@@ -220,7 +221,7 @@ with torch.no_grad():
 
         loss = criterion(outputs, labels)
 
-        total_loss += loss.mean()
+        total_loss += loss.item()
         
     print('Test Accuracy: {} %'.format(100 * total_loss / len(test_loader)))
 end = perf_counter()
