@@ -11,7 +11,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 
-trainning = False
+trainning = True
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 if not torch.cuda.is_available():
@@ -91,13 +91,13 @@ class UNet(nn.Module):
     def __init__(self, in_planes) -> None:
         super(UNet, self).__init__()
         self.sec1 = self._make_layer(in_planes, 64, 64, True)
-        planes = (in_planes) / 2
+        planes = (in_planes) // 2
         self.sec2 = self._make_layer(planes, 128, 128, True)
-        planes = (planes) / 2
+        planes = (planes) // 2
         self.sec3 = self._make_layer(planes, 256, 256, True)
-        planes = (planes) / 2
+        planes = (planes) // 2
         self.sec4 = self._make_layer(planes, 512, 512, True)
-        planes = (planes) / 2
+        planes = (planes) // 2
         self.sec5 = self._make_layer(planes, 1024, 1024, False)
         planes = planes * 2
         self.sec6 = self._make_layer(planes, 512, 512, False)
@@ -106,26 +106,29 @@ class UNet(nn.Module):
         planes = planes * 2
         self.sec8 = self._make_layer(planes, 128, 128, False)
         planes = planes * 2
-        self.sec9 = nn.Sequential([
+        self.sec9 = nn.Sequential(
             nn.Conv2d(in_planes, 64, kernel_size=3, stride=1),
             nn.ReLU(),
-            nn.Conv2d(in_planes-2, 64),
-            nn.ReLU,
-        ])
-        self.sec10 = nn.Conv1d(planes, 1)
+            nn.Conv2d(in_planes, 64, kernel_size=3, stride=1),
+            nn.ReLU(),
+        )
+        self.sec10 = nn.Conv2d(planes, 1, kernel_size=1, stride=1)
 
     def _make_layer(self, in_planes, filter1, filter2, down):
         if down:
             lastLayer = nn.MaxPool2d(kernel_size=2, stride=2)
         else:
-            lastLayer = nn.ConvTranspose2d(kernel_size=2, stride=2)
-        return nn.Sequential([
+            lastLayer = nn.ConvTranspose2d(in_channels=in_planes, 
+                                           out_channels=in_planes//2, 
+                                           kernel_size=2, 
+                                           stride=2)
+        return nn.Sequential(
             nn.Conv2d(in_planes, filter1, kernel_size=3, stride=1),
             nn.ReLU(),
-            nn.Conv2d(in_planes-2, filter2),
-            nn.ReLU,
+            nn.Conv2d(in_planes, filter2, kernel_size=3, stride=1),
+            nn.ReLU(),
             lastLayer
-        ])
+        )
     
     def forward(self, out):
             out = self.sec1(out)
@@ -139,3 +142,8 @@ class UNet(nn.Module):
             out = self.sec9(out)
             out = self.sec10(out)
             return out
+
+# Initialise model 
+model = UNet(256)
+model = model.to(device)
+
