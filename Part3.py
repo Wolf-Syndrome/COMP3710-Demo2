@@ -21,7 +21,7 @@ num_epochs = 1
 learning_rate = 0.1
 model_name = "unet"
 path = 'data/keras_png_slices_data/'
-batch_size = 4
+batch_size = 32
 
 # Dataloader
 
@@ -211,18 +211,18 @@ print("> Testing")
 start = perf_counter() #time generation
 model.eval()
 with torch.no_grad():
-    correct = 0
-    total = 0
+    total_loss = 0
     for images, labels in test_loader:
         images = images.to(device)
         labels = labels.to(device)
 
         outputs = model(images)
 
-        _, predicted = torch.max(outputs.data, 1)
-        total += labels.size(0)
-        correct += (predicted == labels).sum().item()
-    print('Test Accuracy: {} %'.format(100 * correct / total))
+        loss = criterion(outputs, labels)
+
+        total_loss += loss.mean()
+        
+    print('Test Accuracy: {} %'.format(100 * total_loss / len(test_loader)))
 end = perf_counter()
 elapsed = end - start
 print("Testing took " + str(elapsed) + " secs or " + str(elapsed/60) + " mins in total") 
