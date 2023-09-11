@@ -114,6 +114,7 @@ class UNet(nn.Module):
                                 kernel_size=2, stride=2)
         self.sec9 = self._make_layer(128, 64, 64)
         self.sec10 = nn.Conv2d(64, 1, kernel_size=1, stride=1)
+        self.sec11 = nn.ReLU()
 
     def _make_layer(self, in_planes, filter1, filter2):
         return nn.Sequential(
@@ -148,7 +149,7 @@ class UNet(nn.Module):
         out = torch.cat([out, xs1], dim=1)
         out = self.sec9(out)
         
-        out = self.sec10(out)
+        out = self.sec11(self.sec10(out))
         return out
 
 # Initialise model 
