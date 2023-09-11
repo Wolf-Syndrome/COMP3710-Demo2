@@ -70,7 +70,6 @@ def show_samples(total):
     fig, axes = plt.subplots(2, total)
     for X, Y in train_loader:
         for i in range(total):
-            img1 = X[i][0, :, :]
             axes[0, i].imshow(X[i][0, :, :], cmap='gray')
             axes[1, i].imshow(Y[i][0, :, :], cmap='gray')
             axes[0, i].axis('off')
@@ -85,3 +84,58 @@ def show_samples(total):
 
 if not trainning:
     show_samples(5)
+
+#Model
+#https://lmb.informatik.uni-freiburg.de/people/ronneber/u-net/
+class UNet(nn.Module):
+    def __init__(self, in_planes) -> None:
+        super(UNet, self).__init__()
+        self.sec1 = self._make_layer(in_planes, 64, 64, True)
+        planes = (in_planes) / 2
+        self.sec2 = self._make_layer(planes, 128, 128, True)
+        planes = (planes) / 2
+        self.sec3 = self._make_layer(planes, 256, 256, True)
+        planes = (planes) / 2
+        self.sec4 = self._make_layer(planes, 512, 512, True)
+        planes = (planes) / 2
+        self.sec5 = self._make_layer(planes, 1024, 1024, False)
+        planes = planes * 2
+        self.sec6 = self._make_layer(planes, 512, 512, False)
+        planes = planes * 2
+        self.sec7 = self._make_layer(planes, 256, 256, False)
+        planes = planes * 2
+        self.sec8 = self._make_layer(planes, 128, 128, False)
+        planes = planes * 2
+        self.sec9 = nn.Sequential([
+            nn.Conv2d(in_planes, 64, kernel_size=3, stride=1),
+            nn.ReLU(),
+            nn.Conv2d(in_planes-2, 64),
+            nn.ReLU,
+        ])
+        self.sec10 = nn.Conv1d(planes, 1)
+
+    def _make_layer(self, in_planes, filter1, filter2, down):
+        if down:
+            lastLayer = nn.MaxPool2d(kernel_size=2, stride=2)
+        else:
+            lastLayer = nn.ConvTranspose2d(kernel_size=2, stride=2)
+        return nn.Sequential([
+            nn.Conv2d(in_planes, filter1, kernel_size=3, stride=1),
+            nn.ReLU(),
+            nn.Conv2d(in_planes-2, filter2),
+            nn.ReLU,
+            lastLayer
+        ])
+    
+    def forward(self, out):
+            out = self.sec1(out)
+            out = self.sec2(out)
+            out = self.sec3(out)
+            out = self.sec4(out)
+            out = self.sec5(out)
+            out = self.sec6(out)
+            out = self.sec7(out)
+            out = self.sec8(out)
+            out = self.sec9(out)
+            out = self.sec10(out)
+            return out
