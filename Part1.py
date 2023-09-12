@@ -3,7 +3,7 @@ COMP3710 D2 Eigenfaces Lachlan Bunt
 Not all original code
 '''
 import torch
-from time import time
+from time import perf_counter
 # Speed up sklearn algorithms
 if True:
     from sklearnex import patch_sklearn
@@ -26,7 +26,7 @@ if not torch.cuda.is_available():
 
 
 '''PCA'''
-start_time = time()
+start_time = perf_counter()
 # Download the data, if not already on disk and load it as numpy arrays
 #print(get_data_home())
 lfw_people = fetch_lfw_people(min_faces_per_person=70, resize=0.4)
@@ -54,20 +54,31 @@ print("n_classes: %d" % n_classes)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
 # Compute a PCA (eigenfaces) on the face dataset (treated as unlabeled
 # dataset): unsupervised feature extraction / dimensionality reduction
+X_train = torch.tensor(X_train)
+X_test = torch.tensor(X_test)
+y_train = torch.tensor(y_train)
+y_test = torch.tensor(y_test)
+
+X_train.to(device)
+X_test.to(device)
+y_train.to(device)
+y_test.to(device)
+
 n_components = 150
 
 # Center data
-mean = np.mean(X_train, axis=0)
-X_train -= mean
-X_test -= mean
+
+mean = torch.mean(X_train, dim=0)
+X_train -= X_train.subtract(mean)
+X_test -= X_test.subtract(mean)
 #Eigen-decomposition
-U, S, V = np.linalg.svd(X_train, full_matrices=False)
+U, S, V = torch.svd(X_train, some=False)
 components = V[:n_components]
 eigenfaces = components.reshape((n_components, h, w))
 #project into PCA subspace
-X_transformed = np.dot(X_train, components.T)
+X_transformed = torch.mm(X_train, components.T)
 print(X_transformed.shape)
-X_test_transformed = np.dot(X_test, components.T)
+X_test_transformed = torch.mm(X_test, components.T)
 print(X_test_transformed.shape)
 
 '''Plot PCA'''
@@ -90,12 +101,12 @@ def plot_gallery(images, titles, h, w, n_row=3, n_col=4):
 
 # Results
 def show_PCA_results():
-    explained_variance = (S ** 2) / (n_samples - 1)
+    explained_variance = (torch.matrix_power(S, 2)).div(n_samples - 1)
     total_var = explained_variance.sum()
     explained_variance_ratio = explained_variance / total_var
-    ratio_cumsum = np.cumsum(explained_variance_ratio)
+    ratio_cumsum = torch.cumsum(explained_variance_ratio, dim=0).sum()
     print(ratio_cumsum.shape)
-    eigenvalueCount = np.arange(n_components)
+    eigenvalueCount = torch.arange(n_components)
     plt.plot(eigenvalueCount, ratio_cumsum[:n_components])
     plt.title('Compactness')
     plt.show()
@@ -104,14 +115,14 @@ def show_PCA_results():
 #build random forest
 estimator = RandomForestClassifier(n_estimators=150, max_depth=15, max_features=150)
 estimator.fit(X_transformed, y_train) #expects X as [n_samples, n_features]
-predictions = estimator.predict(X_test_transformed)
+predictions = torch.tensor(estimator.predict(X_test_transformed))
 correct = predictions==y_test
 total_test = len(X_test_transformed)
 #print("Gnd Truth:", y_test)
-print("Total time,", time() - start_time)
+print("Total time,", perf_counter() - start_time)
 print("Total Testing", total_test)
 print("Predictions", predictions)
 print("Which Correct:",correct)
-print("Total Correct:",np.sum(correct))
-print("Accuracy:",np.sum(correct)/total_test)
+print("Total Correct:",torch.sum(correct))
+print("Accuracy:",torch.sum(correct)/total_test)
 print(classification_report(y_test, predictions, target_names=target_names))
